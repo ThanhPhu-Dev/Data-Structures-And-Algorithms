@@ -1,5 +1,9 @@
 package tree;
 
+import stack.LinkedListBasedStack;
+import stack.StackADT;
+
+import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 
 public class BinarySearchTree<T extends Comparable<T>> implements TreeADT<T> {
@@ -29,7 +33,7 @@ public class BinarySearchTree<T extends Comparable<T>> implements TreeADT<T> {
 
     @Override
     public boolean add(T elem) {
-        if(contains(elem)) return false;
+        if (contains(elem)) return false;
 
         root = add(root, elem);
         nodeCount++;
@@ -38,7 +42,7 @@ public class BinarySearchTree<T extends Comparable<T>> implements TreeADT<T> {
 
     @Override
     public boolean remove(T elem) {
-        if(!contains(elem)) return false;
+        if (!contains(elem)) return false;
         root = remove(root, elem);
         nodeCount--;
         return true;
@@ -46,20 +50,155 @@ public class BinarySearchTree<T extends Comparable<T>> implements TreeADT<T> {
 
     @Override
     public Iterator<T> traverse(TreeTraverseType type) {
+        switch (type) {
+            case PRE_ORDER:
+                return preOrderTraverse();
+            case IN_ORDER:
+                return inOrderTraverse();
+            case POST_ORDER:
+                return postOrderTraverse();
+            case LEVEL_ORDER:
+                return levelOrderTraverse();
+            default:
+                return null;
+        }
+    }
+
+    private Iterator<T> levelOrderTraverse() {
         return null;
     }
 
+    /**
+     * left right root
+     * nên bỏ vào là root -> right bên left -> left
+     *
+     * @return
+     */
+    private Iterator<T> postOrderTraverse() {
+        final int expectedCount = nodeCount;
+        StackADT<Node> stack = new LinkedListBasedStack();
+        stack.push(root);
+
+        return new Iterator<T>() {
+            Node trav = root;//là node nằm bên phải
+            boolean check = false;
+
+            @Override
+            public boolean hasNext() {
+                if (expectedCount != nodeCount) throw new ConcurrentModificationException();
+
+                return root != null && !stack.isEmpty();
+            }
+
+            @Override
+            public T next() {
+                if (expectedCount != nodeCount) throw new ConcurrentModificationException();
+
+                while (trav != null && trav.getLeft() != null && check == false) {
+                    stack.push(trav.getLeft());
+                    trav = trav.getLeft();
+                }
+                Node node = stack.pop();
+                if (!stack.isEmpty()) {
+                    Node node2 = stack.top().getRight();
+                    if (node2 != null && node2 != node) {
+                        trav = node2;
+                        stack.push(trav);
+                        check = false;
+                    } else {
+                        check = true;
+                    }
+                }
+                return (T) node.getData();
+            }
+        };
+    }
+
+    /**
+     * quy tắt sử dụng inOrder là left root right
+     * vì vậy bỏ vào stack theo thứ tự left root right
+     *
+     * @return
+     */
+    private Iterator<T> inOrderTraverse() {
+        final int expectedCount = nodeCount;
+        StackADT<Node> stack = new LinkedListBasedStack();
+        stack.push(root);
+
+        return new Iterator<T>() {
+            Node trav = root;//là node nằm bên phải
+
+            @Override
+            public boolean hasNext() {
+                if (expectedCount != nodeCount) throw new ConcurrentModificationException();
+
+                return root != null && !stack.isEmpty();
+            }
+
+            @Override
+            public T next() {
+                if (expectedCount != nodeCount) throw new ConcurrentModificationException();
+
+                while (trav != null && trav.getLeft() != null) {
+                    stack.push(trav.getLeft());
+                    trav = trav.getLeft();
+                }
+
+                Node node = stack.pop();
+
+                if (node.getRight() != null) {
+                    stack.push(node.getRight());
+                    trav = node.getRight();
+                }
+                return (T) node.getData();
+            }
+        };
+    }
+
+    /**
+     * quy tắc sử dụng proOrder là root -> left -> right
+     * vì vậy khi bỏ vào stack với thứ tự root -> right -> left
+     *
+     * @return
+     */
+    private Iterator<T> preOrderTraverse() {
+        final int expectedCount = nodeCount;
+        StackADT<Node> stack = new LinkedListBasedStack();
+        stack.push(root);
+
+        return new Iterator<T>() {
+            @Override
+            public boolean hasNext() {
+                if (expectedCount != nodeCount) throw new ConcurrentModificationException();
+
+                return root != null && !stack.isEmpty();
+            }
+
+            @Override
+            public T next() {
+                if (expectedCount != nodeCount) throw new ConcurrentModificationException();
+
+                Node node = stack.pop();
+
+                if (node.getRight() != null) stack.push(node.getRight());
+                if (node.getLeft() != null) stack.push(node.getLeft());
+                return (T) node.getData();
+            }
+        };
+    }
+
+
     private int height(Node node) {
-        if(node == null) return 0;
+        if (node == null) return 0;
         return 1 + Math.max(height(node.getLeft()), height(node.getRight()));
     }
 
     private boolean contains(Node node, T elem) {
-        if(node == null) return false;
+        if (node == null) return false;
 
         int result = elem.compareTo((T) node.getData());
 
-        if(result < 0) return contains(node.getLeft(), elem);
+        if (result < 0) return contains(node.getLeft(), elem);
 
         else if (result > 0) return contains(node.getRight(), elem);
 
@@ -67,12 +206,12 @@ public class BinarySearchTree<T extends Comparable<T>> implements TreeADT<T> {
     }
 
     private Node add(Node node, T elem) {
-        if(node == null) {
+        if (node == null) {
             node = new Node(elem, null, null);
-        }else {
-            if(elem.compareTo((T) node.getData()) > 0) {
+        } else {
+            if (elem.compareTo((T) node.getData()) > 0) {
                 node.setRight(add(node.getRight(), elem));
-            }else {
+            } else {
                 node.setLeft(add(node.getLeft(), elem));
             }
         }
@@ -81,19 +220,19 @@ public class BinarySearchTree<T extends Comparable<T>> implements TreeADT<T> {
 
     private Node remove(Node node, T elem) {
         int result = elem.compareTo((T) node.getData());
-        if(result > 0) {
+        if (result > 0) {
             node.setRight(remove(node.getRight(), elem));
-        } else if(result < 0) {
+        } else if (result < 0) {
             node.setLeft(remove(node.getLeft(), elem));
         } else {
-            if(node.getLeft() == null) {
+            if (node.getLeft() == null) {
                 Node rightNode = node.getRight();
 
                 node.setData(null);
                 node = null;
 
                 return rightNode;
-            } else if(node.getRight() == null) {
+            } else if (node.getRight() == null) {
                 Node leftNode = node.getLeft();
 
                 node.setData(null);
